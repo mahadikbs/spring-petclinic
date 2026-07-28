@@ -11,7 +11,12 @@ pipeline {
         SONARQUBE = "sonarqube"
 
         DEPLOYMENT = "spring-petclinic"
-        NAMESPACE = "spring-petclinic"
+        NAMESPACE  = "spring-petclinic"
+    }
+
+    options {
+        timestamps()
+        ansiColor('xterm')
     }
 
     stages {
@@ -19,18 +24,15 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo "Checking out source..."
-
                 checkout scm
             }
         }
 
         stage('Build') {
             steps {
-                container(maven) {
-                echo "Building application..."
-
+                container('maven') {
                     sh '''
-                    mvn clean compile
+                        mvn clean compile
                     '''
                 }
             }
@@ -38,167 +40,132 @@ pipeline {
 
         stage('Unit Test') {
             steps {
-                container(maven) {
-                echo "Running unit tests..."
-                sh '''
-                mvn test
-                '''
+                container('maven') {
+                    sh '''
+                        mvn test
+                    '''
+                }
             }
-
             post {
                 always {
                     junit '**/target/surefire-reports/*.xml'
                 }
             }
         }
-        }
 
         stage('SonarQube Analysis') {
-
             steps {
-                container(maven) {
-
-                    withSonarQubeEnv("${SONARQUBE}") {
-
+                container('maven') {
+                    withSonarQubeEnv('sonarqube') {
                         sh '''
-                        mvn sonar:sonar \
-                        -Dsonar.projectKey=spring-petclinic \
-                        -Dsonar.projectName="Spring PetClinic"
+                            mvn sonar:sonar \
+                              -Dsonar.projectKey=spring-petclinic \
+                              -Dsonar.projectName="Spring PetClinic"
                         '''
-
+                    }
                 }
-
             }
-
         }
 
         stage('Quality Gate') {
-
             steps {
-                container(maven) {
-                    timeout(time: 15, unit: 'MINUTES') {
-
-                        waitForQualityGate abortPipeline: true
-
+                timeout(time: 15, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
-
             }
-
-        }
         }
 
         stage('Package') {
-
             steps {
-
-                sh '''
-                mvn package -DskipTests
-                '''
-
+                container('maven') {
+                    sh '''
+                        mvn package -DskipTests
+                    '''
+                }
             }
-
-        }
-
-        stage('Build Docker Image') {
-
-            steps {
-
-                sh """
-                docker build \
-                -t ${IMAGE_NAME}:${IMAGE_TAG} \
-                -t ${IMAGE_NAME}:latest .
-                """
-
-            }
-
         }
 
         stage('Docker Login') {
-
             steps {
-
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
-
-                    sh '''
-                    echo "$DOCKER_PASS" | docker login \
-                    -u "$DOCKER_USER" \
-                    --password-stdin
-                    '''
-
+                container('docker') {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'dockerhub',
+                            usernameVariable: 'DOCKER_USER',
+                            passwordVariable: 'DOCKER_PASS'
+                        )
+                    ]) {
+                        sh '''
+                            echo "$DOCKER_PASS" | docker login \
+                              -u "$DOCKER_USER" \
+                              --password-stdin
+                        '''
+                    }
                 }
-
             }
+        }
 
+        stage('Build Docker Image') {
+            steps {
+                container('docker') {
+                    sh """
+                        docker build \
+                          -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                          -t ${IMAGE_NAME}:latest .
+                    """
+                }
+            }
         }
 
         stage('Push Docker Image') {
-
             steps {
-
-                sh """
-                docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                docker push ${IMAGE_NAME}:latest
-                """
-
+                container('docker') {
+                    sh """
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${IMAGE_NAME}:latest
+                    """
+                }
             }
-
         }
 
         stage('Deploy to Kubernetes') {
-
             steps {
+                container('kubectl') {
+                    sh """
+                        kubectl set image deployment/${DEPLOYMENT} \
+                        spring-petclinic=${IMAGE_NAME}:${IMAGE_TAG} \
+                        -n ${NAMESPACE}
 
-                sh """
-                kubectl set image deployment/${DEPLOYMENT} \
-                spring-petclinic=${IMAGE_NAME}:${IMAGE_TAG} \
-                -n ${NAMESPACE}
-                """
-
+                        kubectl rollout status deployment/${DEPLOYMENT} \
+                        -n ${NAMESPACE}
+                    """
+                }
             }
-
         }
 
         stage('Verify Deployment') {
-
             steps {
-
-                sh """
-                kubectl rollout status deployment/${DEPLOYMENT} -n ${NAMESPACE}
-                kubectl get pods -n ${NAMESPACE}
-                """
+                container('kubectl') {
+                    sh '''
+                        kubectl get pods -n spring-petclinic
+                        kubectl get svc -n spring-petclinic
+                    '''
+                }
             }
-
         }
-
-        }
+    }
 
     post {
-
         success {
-
-            echo "Deployment Successful"
-
+            echo "Pipeline completed successfully."
         }
 
         failure {
-
-            echo "Pipeline Failed"
-
+            echo "Pipeline failed."
         }
 
         always {
-
             cleanWs()
-
         }
-
     }
-
-}
 }
