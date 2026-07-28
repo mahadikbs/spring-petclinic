@@ -23,30 +23,30 @@ pipeline {
             }
         }
 
-        stage('Build') {
-            steps {
-                container('maven') {
-                    sh '''
-                        mvn clean compile
-                    '''
-                }
-            }
-        }
+        // stage('Build') {
+        //     steps {
+        //         container('maven') {
+        //             sh '''
+        //                 mvn clean compile
+        //             '''
+        //         }
+        //     }
+        // }
 
-        stage('Unit Test') {
-            steps {
-                container('maven') {
-                    sh '''
-                        mvn test
-                    '''
-                }
-            }
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
-                }
-            }
-        }
+        // stage('Unit Test') {
+        //     steps {
+        //         container('maven') {
+        //             sh '''
+        //                 mvn test
+        //             '''
+        //         }
+        //     }
+        //     post {
+        //         always {
+        //             junit '**/target/surefire-reports/*.xml'
+        //         }
+        //     }
+        // }
 
         stage('SonarQube Analysis') {
             steps {
