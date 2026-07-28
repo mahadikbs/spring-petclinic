@@ -51,6 +51,7 @@ pipeline {
                 }
             }
         }
+        }
 
         stage('SonarQube Analysis') {
 
@@ -83,6 +84,7 @@ pipeline {
 
             }
 
+        }
         }
 
         stage('Package') {
@@ -174,7 +176,7 @@ pipeline {
 
         }
 
-    }
+        }
 
     post {
 
@@ -198,4 +200,5 @@ pipeline {
 
     }
 
+}
 }
