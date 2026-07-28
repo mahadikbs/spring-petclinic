@@ -14,12 +14,6 @@ pipeline {
         NAMESPACE = "spring-petclinic"
     }
 
-    options {
-        timestamps()
-        ansiColor('xterm')
-        buildDiscarder(logRotator(numToKeepStr: '20'))
-    }
-
     stages {
 
         stage('Checkout') {
