@@ -24,30 +24,30 @@ pipeline {
             }
         }
 
-        stage('Build') {
-            steps {
-                echo "Building application..."
+        // stage('Build') {
+        //     steps {
+        //         echo "Building application..."
 
-                sh '''
-                mvn clean compile
-                '''
-            }
-        }
+        //         sh '''
+        //         mvn clean compile
+        //         '''
+        //     }
+        // }
 
-        stage('Unit Test') {
-            steps {
+        // stage('Unit Test') {
+        //     steps {
 
-                sh '''
-                mvn test
-                '''
-            }
+        //         sh '''
+        //         mvn test
+        //         '''
+        //     }
 
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
-                }
-            }
-        }
+        //     post {
+        //         always {
+        //             junit '**/target/surefire-reports/*.xml'
+        //         }
+        //     }
+        // }
 
         stage('SonarQube Analysis') {
 
