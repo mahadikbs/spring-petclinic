@@ -182,13 +182,13 @@ pipeline {
 
         success {
 
-            echo "Deployment Successful"
+            echo "Deployment is Successful"
 
         }
 
         failure {
 
-            echo "Pipeline Failed"
+            echo "Pipeline is Failed"
 
         }
 
