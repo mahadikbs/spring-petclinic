@@ -24,42 +24,46 @@ pipeline {
             }
         }
 
-        // stage('Build') {
-        //     steps {
-        //         echo "Building application..."
+        stage('Build') {
+            steps {
+                container(maven) {
+                echo "Building application..."
 
-        //         sh '''
-        //         mvn clean compile
-        //         '''
-        //     }
-        // }
+                    sh '''
+                    mvn clean compile
+                    '''
+                }
+            }
+        }
 
-        // stage('Unit Test') {
-        //     steps {
+        stage('Unit Test') {
+            steps {
+                container(maven) {
+                echo "Running unit tests..."
+                sh '''
+                mvn test
+                '''
+            }
 
-        //         sh '''
-        //         mvn test
-        //         '''
-        //     }
-
-        //     post {
-        //         always {
-        //             junit '**/target/surefire-reports/*.xml'
-        //         }
-        //     }
-        // }
+            post {
+                always {
+                    junit '**/target/surefire-reports/*.xml'
+                }
+            }
+        }
 
         stage('SonarQube Analysis') {
 
             steps {
+                container(maven) {
 
-                withSonarQubeEnv("${SONARQUBE}") {
+                    withSonarQubeEnv("${SONARQUBE}") {
 
-                    sh '''
-                    mvn sonar:sonar \
-                    -Dsonar.projectKey=spring-petclinic \
-                    -Dsonar.projectName="Spring PetClinic"
-                    '''
+                        sh '''
+                        mvn sonar:sonar \
+                        -Dsonar.projectKey=spring-petclinic \
+                        -Dsonar.projectName="Spring PetClinic"
+                        '''
 
                 }
 
@@ -70,10 +74,10 @@ pipeline {
         stage('Quality Gate') {
 
             steps {
+                container(maven) {
+                    timeout(time: 15, unit: 'MINUTES') {
 
-                timeout(time: 15, unit: 'MINUTES') {
-
-                    waitForQualityGate abortPipeline: true
+                        waitForQualityGate abortPipeline: true
 
                 }
 
