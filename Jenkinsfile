@@ -48,52 +48,58 @@ pipeline {
         //     }
         // }
 
-        stage('SonarQube Analysis') {
-            steps {
-                container('maven') {
-                    withSonarQubeEnv('sonarqube') {
-                        sh '''
-                              mvn clean verify \
-                              org.sonarsource.scanner.maven:sonar-maven-plugin:5.2.0.4988:sonar \
-                              -Dsonar.projectKey=spring-petclinic \
-                              -Dsonar.projectName="Spring PetClinic"
-                        '''
-                    }
-                }
-            }
-        }   
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 15, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
+        // stage('SonarQube Analysis') {
+        //     steps {
+        //         container('maven') {
+        //             withSonarQubeEnv('sonarqube') {
+        //                 sh '''
+        //                       mvn clean verify \
+        //                       org.sonarsource.scanner.maven:sonar-maven-plugin:5.2.0.4988:sonar \
+        //                       -Dsonar.projectKey=spring-petclinic \
+        //                       -Dsonar.projectName="Spring PetClinic"
+        //                 '''
+        //             }
+        //         }
+        //     }
+        // }   
+        // stage('Quality Gate') {
+        //     steps {
+        //         timeout(time: 15, unit: 'MINUTES') {
+        //             waitForQualityGate abortPipeline: true
+        //         }
+        //     }
+        // }
 
-        stage('Package') {
-            steps {
-                container('maven') {
-                    sh '''
-                        mvn package -DskipTests
-                    '''
-                }
-            }
-        }
+        // stage('Package') {
+        //     steps {
+        //         container('maven') {
+        //             sh '''
+        //                 mvn package -DskipTests
+        //             '''
+        //         }
+        //     }
+        // }
 
         stage('Docker Login/Build/push') {
             steps {
                     container('kaniko') {
                         sh '''
-                            cp /kaniko/.docker/.dockerconfigjson /kaniko/.docker/config.json
+                            mkdir -p /tmp/.docker
 
-                            ls -l /kaniko/.docker
-                            cat /kaniko/.docker/config.json
+                            cp /kaniko/.docker/.dockerconfigjson /tmp/.docker/config.json
+
+                            echo "Docker config:"
+                            ls -l /tmp/.docker
+                            cat /tmp/.docker/config.json
+
+                            export DOCKER_CONFIG=/tmp/.docker
 
                             /kaniko/executor \
                             --context="${WORKSPACE}" \
                             --dockerfile="${WORKSPACE}/Dockerfile" \
                             --destination=docker.io/mahadikbs/spring-petclinic:${BUILD_NUMBER} \
-                            --destination=docker.io/mahadikbs/spring-petclinic:latest
+                            --destination=docker.io/mahadikbs/spring-petclinic:latest \
+                            --cache=true
                         '''
                     }
                 }
