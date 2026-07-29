@@ -80,48 +80,48 @@ pipeline {
             }
         }
 
-        stage('Docker Login') {
+        stage('Docker Login/Build/push') {
             steps {
-                container('docker') {
-                    withCredentials([
-                        usernamePassword(
-                            credentialsId: 'dockerhub',
-                            usernameVariable: 'DOCKER_USER',
-                            passwordVariable: 'DOCKER_PASS'
-                        )
-                    ]) {
+                    container('kaniko') {
                         sh '''
-                            echo "$DOCKER_PASS" | docker login \
-                              -u "$DOCKER_USER" \
-                              --password-stdin
+                            cp /kaniko/.docker/.dockerconfigjson /kaniko/.docker/config.json
+
+                            ls -l /kaniko/.docker
+                            cat /kaniko/.docker/config.json
+
+                            /kaniko/executor \
+                            --context="${WORKSPACE}" \
+                            --dockerfile="${WORKSPACE}/Dockerfile" \
+                            --destination=docker.io/mahadikbs/spring-petclinic:${BUILD_NUMBER} \
+                            --destination=docker.io/mahadikbs/spring-petclinic:latest
                         '''
                     }
                 }
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                container('docker') {
-                    sh """
-                        docker build \
-                          -t ${IMAGE_NAME}:${IMAGE_TAG} \
-                          -t ${IMAGE_NAME}:latest .
-                    """
-                }
-            }
-        }
+        // stage('Build Docker Image') {
+        //     steps {
+        //         container('docker') {
+        //             sh """
+        //                 docker build \
+        //                   -t ${IMAGE_NAME}:${IMAGE_TAG} \
+        //                   -t ${IMAGE_NAME}:latest .
+        //             """
+        //         }
+        //     }
+        // }
 
-        stage('Push Docker Image') {
-            steps {
-                container('docker') {
-                    sh """
-                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                        docker push ${IMAGE_NAME}:latest
-                    """
-                }
-            }
-        }
+        // stage('Push Docker Image') {
+        //     steps {
+        //         container('docker') {
+        //             sh """
+        //                 docker push ${IMAGE_NAME}:${IMAGE_TAG}
+        //                 docker push ${IMAGE_NAME}:latest
+        //             """
+        //         }
+        //     }
+        // }
 
         stage('Deploy to Kubernetes') {
             steps {
