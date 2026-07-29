@@ -107,6 +107,8 @@ pipeline {
 
                                 export DOCKER_CONFIG=/tmp/.docker
 
+                                cat /tmp/.docker/config.json
+
                                 /kaniko/executor \
                                 --context="${WORKSPACE}" \
                                 --dockerfile="${WORKSPACE}/Dockerfile" \
