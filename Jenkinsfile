@@ -83,26 +83,39 @@ pipeline {
         stage('Docker Login/Build/push') {
             steps {
                     container('kaniko') {
-                        sh '''
-                            mkdir -p /tmp/.docker
+                        withCredentials([
+                            usernamePassword(
+                                credentialsId: 'dockerhub',
+                                usernameVariable: 'DOCKER_USER',
+                                passwordVariable: 'DOCKER_PASS'
+                            )
+                        ]) {
+                            sh '''
+                                mkdir -p /tmp/.docker
 
-                            cp /kaniko/.docker/.dockerconfigjson /tmp/.docker/config.json
+                                AUTH=$(printf "%s:%s" "$DOCKER_USER" "$DOCKER_PASS" | base64 | tr -d '\n')
 
-                            echo "Docker config:"
-                            ls -l /tmp/.docker
-                            cat /tmp/.docker/config.json
-
-                            export DOCKER_CONFIG=/tmp/.docker
-
-                            /kaniko/executor \
-                            --context="${WORKSPACE}" \
-                            --dockerfile="${WORKSPACE}/Dockerfile" \
-                            --destination=docker.io/mahadikbs/spring-petclinic:${BUILD_NUMBER} \
-                            --destination=docker.io/mahadikbs/spring-petclinic:latest \
-                            --cache=true
-                        '''
+                                cat > /tmp/.docker/config.json <<EOF
+                    {
+                    "auths": {
+                        "https://index.docker.io/v1/": {
+                        "auth": "$AUTH"
+                        }
                     }
-                }
+                    }
+                    EOF
+
+                                export DOCKER_CONFIG=/tmp/.docker
+
+                                /kaniko/executor \
+                                --context="${WORKSPACE}" \
+                                --dockerfile="${WORKSPACE}/Dockerfile" \
+                                --destination=docker.io/mahadikbs/spring-petclinic:${BUILD_NUMBER} \
+                                --destination=docker.io/mahadikbs/spring-petclinic:latest \
+                                --cache=true
+                            '''
+                        }
+                    }
             }
 
         // stage('Build Docker Image') {
