@@ -53,15 +53,15 @@ pipeline {
                 container('maven') {
                     withSonarQubeEnv('sonarqube') {
                         sh '''
-                            mvn sonar:sonar \
+                              mvn clean verify \
+                              org.sonarsource.scanner.maven:sonar-maven-plugin:5.2.0.4988:sonar \
                               -Dsonar.projectKey=spring-petclinic \
                               -Dsonar.projectName="Spring PetClinic"
                         '''
                     }
                 }
             }
-        }
-
+        }   
         stage('Quality Gate') {
             steps {
                 timeout(time: 15, unit: 'MINUTES') {
